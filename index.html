@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://air-quality-api.open-meteo.com">
   <link rel="preconnect" href="https://geocoding-api.open-meteo.com">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -37,6 +38,22 @@
         </div>
       </section>
 
+      <section class="sky-scene sky-clear" id="skyScene" aria-label="Animated current sky conditions">
+        <div class="sky-stars" aria-hidden="true"></div>
+        <div class="sky-sun" aria-hidden="true"><i data-lucide="sun"></i></div>
+        <div class="sky-moon" aria-hidden="true"><i data-lucide="moon"></i></div>
+        <div class="sky-cloud cloud-back" aria-hidden="true"><i data-lucide="cloud"></i></div>
+        <div class="sky-cloud cloud-front" aria-hidden="true"><i data-lucide="cloud"></i></div>
+        <div class="sky-rain" aria-hidden="true"></div>
+        <div class="sky-snow" aria-hidden="true"></div>
+        <div class="sky-lightning" aria-hidden="true"><i data-lucide="zap"></i></div>
+        <div class="sky-overlay">
+          <span class="sky-live"><span class="live-dot"></span> LIVE SKY</span>
+          <div class="sky-caption" id="skyCaption">A clear sky over your location</div>
+          <div class="sky-condition-icon" id="skyConditionIcon"><i data-lucide="sun"></i></div>
+        </div>
+      </section>
+
       <section class="location-row">
         <div><div class="location-name" id="placeName">Nandurbar, Maharashtra, India</div><div class="location-meta" id="placeMeta">Loading local conditions…</div></div>
         <div class="updated"><span class="live-dot"></span><span id="updatedAt">CONNECTING</span></div>
@@ -45,7 +62,7 @@
       <section class="overview-grid">
         <article class="panel current-panel">
           <div class="panel-head"><span class="panel-kicker">CURRENT WEATHER</span><span class="mini-pill">NOW</span></div>
-          <div class="current-main"><div><div class="temperature" id="temperature">--°</div><div class="condition" id="condition">Fetching conditions</div></div><div class="weather-symbol" id="weatherSymbol">☀</div></div>
+          <div class="current-main"><div><div class="temperature" id="temperature">--°</div><div class="condition" id="condition">Fetching conditions</div></div><div class="weather-symbol" id="weatherSymbol"><i data-lucide="sun"></i></div></div>
           <div class="feels">Feels like <b id="feelsLike">--°</b></div>
           <div class="stats-grid">
             <div class="stat"><span>HUMIDITY</span><b id="humidity">--%</b></div>

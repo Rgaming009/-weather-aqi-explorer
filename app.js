@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 let place = {name:"Nandurbar", admin1:"Maharashtra", country:"India", latitude:21.3667, longitude:74.25, timezone:"Asia/Kolkata"};
 let fahrenheit = false, hourlyChart = null, historyChart = null, searchTimer = null;
-const weatherCodes = {0:["Clear sky","☀"],1:["Mainly clear","🌤"],2:["Partly cloudy","⛅"],3:["Overcast","☁"],45:["Fog","🌫"],48:["Rime fog","🌫"],51:["Light drizzle","🌦"],53:["Drizzle","🌦"],55:["Dense drizzle","🌧"],61:["Slight rain","🌦"],63:["Moderate rain","🌧"],65:["Heavy rain","🌧"],71:["Slight snow","🌨"],73:["Moderate snow","🌨"],75:["Heavy snow","❄"],80:["Rain showers","🌦"],81:["Rain showers","🌧"],82:["Violent rain showers","⛈"],95:["Thunderstorm","⛈"],96:["Thunderstorm with hail","⛈"],99:["Thunderstorm with hail","⛈"]};
+const weatherCodes = {0:["Clear sky","sun","sun"],1:["Mainly clear","cloud-sun","cloud-sun"],2:["Partly cloudy","cloud-sun","cloud-sun"],3:["Overcast","cloud","cloud"],45:["Fog","cloud-fog","cloud-fog"],48:["Rime fog","cloud-fog","cloud-fog"],51:["Light drizzle","cloud-drizzle","cloud-drizzle"],53:["Drizzle","cloud-drizzle","cloud-drizzle"],55:["Dense drizzle","cloud-drizzle","cloud-drizzle"],61:["Slight rain","cloud-rain","cloud-rain"],63:["Moderate rain","cloud-rain","cloud-rain"],65:["Heavy rain","cloud-rain","cloud-rain"],71:["Slight snow","cloud-snow","cloud-snow"],73:["Moderate snow","cloud-snow","cloud-snow"],75:["Heavy snow","snowflake","snowflake"],80:["Rain showers","cloud-rain","cloud-rain"],81:["Rain showers","cloud-rain","cloud-rain"],82:["Violent rain showers","cloud-lightning","cloud-lightning"],95:["Thunderstorm","cloud-lightning","cloud-lightning"],96:["Thunderstorm with hail","cloud-lightning","cloud-lightning"],99:["Thunderstorm with hail","cloud-lightning","cloud-lightning"]};
 const temp = n => n == null ? "--" : `${Math.round(fahrenheit ? n*9/5+32 : n)}°${fahrenheit?"F":"C"}`;
 const dateFmt = (s, opts={month:"short",day:"numeric"}) => new Date(s+"T12:00:00").toLocaleDateString(undefined,opts);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2600)}
@@ -24,12 +24,22 @@ async function loadPlace(p){
 }
 function renderWeather(w){
   const c=w.current, code=weatherCodes[c.weather_code]||["Weather conditions","◌"];
-  $("temperature").textContent=temp(c.temperature_2m);$("condition").textContent=code[0];$("weatherSymbol").textContent=code[1];
+  $("temperature").textContent=temp(c.temperature_2m);$("condition").textContent=code[0];$("weatherSymbol").innerHTML=`<i data-lucide="${code[1]}"></i>`; setSky(c.weather_code,c.is_day,code[0],code[1]);
   $("feelsLike").textContent=temp(c.apparent_temperature);$("humidity").textContent=`${c.relative_humidity_2m}%`;
   $("wind").textContent=`${Math.round(c.wind_speed_10m)} km/h`;$("windDir").textContent=`${Math.round(c.wind_direction_10m)}°`;
   $("pressure").textContent=`${Math.round(c.pressure_msl)} hPa`;
 }
 function aqiBand(v){if(v<=50)return["Good","#72e0b0"];if(v<=100)return["Moderate","#d4dc75"];if(v<=150)return["Unhealthy for sensitive groups","#ffbf76"];if(v<=200)return["Unhealthy","#ff927c"];if(v<=300)return["Very unhealthy","#d98bbd"];return["Hazardous","#b978d7"]}
+function setSky(code,isDay,description,iconName){
+  const scene=$("skyScene");
+  const kind = [95,96,99,82].includes(code) ? "storm" : [51,53,55,61,63,65,80,81].includes(code) ? "rainy" : [71,73,75].includes(code) ? "snowy" : [45,48].includes(code) ? "cloudy" : code===3 ? "cloudy" : "clear";
+  scene.className=`sky-scene sky-${isDay===0?"night":kind}`;
+  if(isDay===0) scene.className="sky-scene sky-night";
+  $("skyCaption").textContent=isDay===0 ? `A calm night · ${description}` : `${description} over your location`;
+  $("skyConditionIcon").innerHTML=`<i data-lucide="${iconName}"></i>`;
+  refreshIcons();
+}
+function refreshIcons(){if(window.lucide)window.lucide.createIcons();}
 function renderAir(a){
   const c=a.current||{}, v=c.us_aqi;const [label,color]=v==null?["Unavailable","#8290a8"]:aqiBand(v);
   $("aqiValue").textContent=v==null?"—":Math.round(v);$("aqiValue").style.color=color;$("aqiStatus").textContent=label;
@@ -47,7 +57,8 @@ function renderHourly(w){
   hourlyChart=new Chart($("hourlyChart"),{type:"line",data:{labels,datasets:[{data:w.hourly.temperature_2m.slice(0,24).map(v=>fahrenheit?v*9/5+32:v),borderColor:"#63e3e8",backgroundColor:"#63e3e81c",fill:true,tension:.35,pointRadius:0,borderWidth:2,yAxisID:"y"},{data:w.hourly.precipitation_probability.slice(0,24),borderColor:"#769cff",borderDash:[4,4],tension:.3,pointRadius:0,borderWidth:1.5,yAxisID:"y1"}]},options:{...cfg,scales:{...cfg.scales,y:{...cfg.scales.y},y1:{position:"right",min:0,max:100,grid:{display:false},ticks:{color:"#7889a4",callback:v=>v+"%"},border:{display:false}}}}});
 }
 function renderForecast(w){
-  $("forecastGrid").innerHTML=w.daily.time.map((d,i)=>{const code=weatherCodes[w.daily.weather_code[i]]||["","◌"];return `<div class="forecast-card"><div class="forecast-day">${i===0?"TODAY":dateFmt(d,{weekday:"short"}).toUpperCase()}</div><div class="forecast-icon">${code[1]}</div><div class="forecast-temps">${temp(w.daily.temperature_2m_max[i])}<span>${temp(w.daily.temperature_2m_min[i])}</span></div><div class="forecast-rain">☂ ${w.daily.precipitation_probability_max[i]??0}%</div></div>`}).join("");
+  $("forecastGrid").innerHTML=w.daily.time.map((d,i)=>{const code=weatherCodes[w.daily.weather_code[i]]||["","cloud","cloud"];return `<div class="forecast-card"><div class="forecast-day">${i===0?"TODAY":dateFmt(d,{weekday:"short"}).toUpperCase()}</div><div class="forecast-icon"><i data-lucide="${code[2]}"></i></div><div class="forecast-temps">${temp(w.daily.temperature_2m_max[i])}<span>${temp(w.daily.temperature_2m_min[i])}</span></div><div class="forecast-rain"><i data-lucide="droplets"></i> ${w.daily.precipitation_probability_max[i]??0}%</div></div>`}).join("");
+  refreshIcons();
 }
 async function searchCities(q){
   if(!q.trim())return [];
@@ -88,3 +99,4 @@ async function loadHistory(){
 $("historyBtn").addEventListener("click",loadHistory);
 $("startDate").max=new Date().toISOString().slice(0,10);$("endDate").max=new Date().toISOString().slice(0,10);
 loadPlace(place);
+\nrefreshIcons();\n
