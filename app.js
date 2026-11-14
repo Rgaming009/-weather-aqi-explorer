@@ -9,21 +9,55 @@ function setBusy(id,busy){const el=$(id);el.disabled=busy;el.style.opacity=busy?
 async function json(url){const r=await fetch(url);if(!r.ok)throw new Error(`Data service returned ${r.status}`);return r.json()}
 function locationLabel(p){return [p.name,p.admin1,p.country].filter(Boolean).join(", ")}
 async function loadPlace(p){
-  place=p; $("placeName").textContent=locationLabel(p); $("placeMeta").textContent=`${p.latitude.toFixed(3)}°, ${p.longitude.toFixed(3)}° · ${p.timezone||"Local time"}`;
-  $("updatedAt").textContent="UPDATING";
-  try{
-    const [w,a]=await Promise.all([
-      json(`https://api.open-meteo.com/v1/forecast?latitude=${p.latitude}&longitude=${p.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=7&timezone=auto`),
-      json(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${p.latitude}&longitude=${p.longitude}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone,us_aqi&timezone=auto`)
-    ]);
-    renderWeather(w);renderAir(a);renderHourly(w);renderForecast(w);
+  place=p;
+  $("placeName").textContent=locationLabel(p);
+  $("placeMeta").textContent=`${p.latitude.toFixed(3)}°, ${p.longitude.toFixed(3)}° · ${p.timezone||"Local time"}`;
+  $("updatedAt").textContent="CONNECTING";
+  const forecastUrl=`https://api.open-meteo.com/v1/forecast?latitude=${p.latitude}&longitude=${p.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=7&timezone=auto`;
+  const airUrl=`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${p.latitude}&longitude=${p.longitude}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone,us_aqi&timezone=auto`;
+  const safeJson = async (url) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 18000);
+    try {
+      const response = await fetch(url, {signal:controller.signal, cache:"no-store"});
+      if(!response.ok) throw new Error(`API error ${response.status}`);
+      return await response.json();
+    } finally { clearTimeout(timer); }
+  };
+  const [weatherResult, airResult] = await Promise.allSettled([safeJson(forecastUrl), safeJson(airUrl)]);
+  if(weatherResult.status==="fulfilled"){
+    const w=weatherResult.value;
+    renderWeather(w);
+    renderHourly(w);
+    renderForecast(w);
+    $("startDate").value=w.daily.time[0];
+    $("endDate").value=w.daily.time[Math.min(6,w.daily.time.length-1)];
+    loadHistory();
+  } else {
+    console.error("Weather API:",weatherResult.reason);
+    $("condition").textContent="Weather data temporarily unavailable";
+    $("updatedAt").textContent="WEATHER API OFFLINE";
+    toast("Weather data could not load. Check your internet and tap Search again.");
+  }
+  if(airResult.status==="fulfilled"){
+    renderAir(airResult.value);
+  } else {
+    console.error("Air-quality API:",airResult.reason);
+    $("aqiValue").textContent="—";
+    $("aqiStatus").textContent="Data unavailable";
+    $("pm25").textContent="—";
+    $("pm10").textContent="—";
+    $("ozone").textContent="—";
+    $("no2").textContent="—";
+  }
+  if(weatherResult.status==="fulfilled" && airResult.status==="fulfilled"){
     $("updatedAt").textContent=`UPDATED ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`;
-    $("startDate").value=w.daily.time[0];$("endDate").value=w.daily.time[Math.min(6,w.daily.time.length-1)];
-    await loadHistory();
-  }catch(e){console.error(e);$("updatedAt").textContent="DATA UNAVAILABLE";toast("Could not load live data. Check your connection and try again.");}
+  } else if(weatherResult.status==="fulfilled"){
+    $("updatedAt").textContent="WEATHER UPDATED · AQI UNAVAILABLE";
+  }
 }
 function renderWeather(w){
-  const c=w.current, code=weatherCodes[c.weather_code]||["Weather conditions","◌"];
+  const c=w.current, code=weatherCodes[c.weather_code]||["Weather conditions","cloud","cloud"];
   $("temperature").textContent=temp(c.temperature_2m);$("condition").textContent=code[0];$("weatherSymbol").innerHTML=`<i data-lucide="${code[1]}"></i>`; setSky(c.weather_code,c.is_day,code[0],code[1]);
   $("feelsLike").textContent=temp(c.apparent_temperature);$("humidity").textContent=`${c.relative_humidity_2m}%`;
   $("wind").textContent=`${Math.round(c.wind_speed_10m)} km/h`;$("windDir").textContent=`${Math.round(c.wind_direction_10m)}°`;
