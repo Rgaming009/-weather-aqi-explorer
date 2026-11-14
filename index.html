@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d18">
+  <meta name="description" content="Weather, air quality and historical climate explorer.">
+  <title>Atmos — Weather & Air Intelligence</title>
+  <link rel="preconnect" href="https://api.open-meteo.com">
+  <link rel="preconnect" href="https://air-quality-api.open-meteo.com">
+  <link rel="preconnect" href="https://geocoding-api.open-meteo.com">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Atmos home"><span class="brand-mark">A</span><span>ATMOS<span class="brand-sub">WEATHER INTELLIGENCE</span></span></a>
+      <div class="top-actions">
+        <span class="live-dot"></span><span class="live-label">LIVE DATA</span>
+        <button id="unitToggle" class="ghost-btn" title="Toggle Celsius/Fahrenheit">°C</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">GLOBAL CONDITIONS <span class="eyebrow-line"></span></p>
+          <h1>Understand the<br><span>atmosphere.</span></h1>
+          <p class="hero-copy">Real-time weather, air quality and climate history — in one place.</p>
+        </div>
+        <div class="search-wrap">
+          <label class="searchbox"><span class="search-icon">⌕</span><input id="citySearch" autocomplete="off" placeholder="Search a city or place…" value="Nandurbar"><button id="searchBtn">SEARCH</button></label>
+          <div id="suggestions" class="suggestions hidden"></div>
+          <div class="quick-row"><span>QUICK ACCESS</span><button class="quick-city" data-city="Nandurbar">Nandurbar</button><button class="quick-city" data-city="Leh">Leh</button><button class="quick-city" data-city="Yakutsk">Yakutsk</button></div>
+        </div>
+      </section>
+
+      <section class="location-row">
+        <div><div class="location-name" id="placeName">Nandurbar, Maharashtra, India</div><div class="location-meta" id="placeMeta">Loading local conditions…</div></div>
+        <div class="updated"><span class="live-dot"></span><span id="updatedAt">CONNECTING</span></div>
+      </section>
+
+      <section class="overview-grid">
+        <article class="panel current-panel">
+          <div class="panel-head"><span class="panel-kicker">CURRENT WEATHER</span><span class="mini-pill">NOW</span></div>
+          <div class="current-main"><div><div class="temperature" id="temperature">--°</div><div class="condition" id="condition">Fetching conditions</div></div><div class="weather-symbol" id="weatherSymbol">☀</div></div>
+          <div class="feels">Feels like <b id="feelsLike">--°</b></div>
+          <div class="stats-grid">
+            <div class="stat"><span>HUMIDITY</span><b id="humidity">--%</b></div>
+            <div class="stat"><span>WIND</span><b id="wind">-- km/h</b></div>
+            <div class="stat"><span>WIND DIRECTION</span><b id="windDir">--</b></div>
+            <div class="stat"><span>PRESSURE</span><b id="pressure">-- hPa</b></div>
+          </div>
+        </article>
+
+        <article class="panel air-panel">
+          <div class="panel-head"><span class="panel-kicker">AIR QUALITY INDEX</span><span class="mini-pill">US AQI</span></div>
+          <div class="aqi-main"><div class="aqi-number" id="aqiValue">--</div><div><div class="aqi-status" id="aqiStatus">Loading</div><div class="aqi-caption">United States AQI scale</div></div></div>
+          <div class="aqi-meter"><div id="aqiMeterFill"></div></div>
+          <div class="pollutants">
+            <div><span>PM2.5</span><b id="pm25">-- µg/m³</b></div>
+            <div><span>PM10</span><b id="pm10">-- µg/m³</b></div>
+            <div><span>O₃</span><b id="ozone">-- µg/m³</b></div>
+            <div><span>NO₂</span><b id="no2">-- µg/m³</b></div>
+          </div>
+          <p class="micro-note">AQI is a modeled estimate from the selected grid cell, not a certified local monitoring-station reading.</p>
+        </article>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title"><div><p class="eyebrow">THE NEXT 24 HOURS</p><h2>Hourly outlook</h2></div><span class="section-note">LOCAL TIME</span></div>
+        <article class="panel chart-panel"><div class="chart-legend"><span><i class="legend-temp"></i> Temperature</span><span><i class="legend-rain"></i> Precipitation probability</span></div><div class="chart-holder"><canvas id="hourlyChart"></canvas></div></article>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title"><div><p class="eyebrow">CLIMATE ARCHIVE</p><h2>Explore weather history</h2><p class="section-description">Compare daily temperatures across a date range and find the coldest and hottest days in the selected period.</p></div></div>
+        <article class="panel history-panel">
+          <div class="history-controls">
+            <label>START DATE<input id="startDate" type="date"></label>
+            <label>END DATE<input id="endDate" type="date"></label>
+            <button id="historyBtn" class="primary-btn">ANALYZE HISTORY <span>↗</span></button>
+          </div>
+          <div id="historyMessage" class="history-message">Choose a date range to explore historical daily records.</div>
+          <div class="record-grid">
+            <div class="record-card"><span>COLDEST DAY · MIN TEMP</span><b id="coldRecord">--</b><small id="coldDate">—</small></div>
+            <div class="record-card"><span>HOTTEST DAY · MAX TEMP</span><b id="hotRecord">--</b><small id="hotDate">—</small></div>
+            <div class="record-card"><span>PERIOD AVERAGE</span><b id="avgRecord">--</b><small>Mean daily temperature</small></div>
+          </div>
+          <div class="chart-holder history-chart"><canvas id="historyChart"></canvas></div>
+          <p class="micro-note">Historical values come from Open-Meteo's gridded climate/reanalysis archive. They are estimates for the selected coordinates and may differ from official station extremes. Coverage depends on location and dataset.</p>
+        </article>
+      </section>
+
+      <section class="section-block">
+        <div class="section-title"><div><p class="eyebrow">PLAN AHEAD</p><h2>7-day forecast</h2></div></div>
+        <div id="forecastGrid" class="forecast-grid"><div class="panel forecast-placeholder">Loading forecast…</div></div>
+      </section>
+
+      <footer><div class="brand footer-brand"><span class="brand-mark">A</span><span>ATMOS<span class="brand-sub">WEATHER INTELLIGENCE</span></span></div><p>Data by Open-Meteo · Designed for exploration, not emergency decisions.</p><p><a href="https://open-meteo.com/en/terms" target="_blank" rel="noreferrer">API terms</a> · <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Data sources</a></p></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
